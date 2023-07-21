@@ -36,7 +36,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringP("mode", "m", util.MODE_STANDARD.String(), "mode: History or Standard")
 	rootCmd.PersistentFlags().StringP("marketplace", "k", "TSWAPaqyCSx2KABk68Shruf4rp7CxcNi8hAsbdwmHbN", "marketplace to fetch sigs for")
-	rootCmd.PersistentFlags().IntP("siFetchSize", "f", 1000, "# of sigs to fetch at a time (max 1000)")
+	rootCmd.PersistentFlags().IntP("sigFetchSize", "f", 1000, "# of sigs to fetch at a time (max 1000)")
 	rootCmd.PersistentFlags().IntP("sigWriteSize", "w", 50, "# of sigs to write at a time (max 50)")
 	rootCmd.PersistentFlags().StringP("part", "p", "a", "which part of the pipeline to run (a, b, or c)")
 	rootCmd.PersistentFlags().StringP("proxy", "x", "", "optional rpc proxy url")
@@ -65,7 +65,7 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println("Invalid marketplace address")
 		os.Exit(1)
 	}
-	fetchSize, err := strconv.Atoi(cmd.Flag("siFetchSize").Value.String())
+	fetchSize, err := strconv.Atoi(cmd.Flag("sigFetchSize").Value.String())
 	if err != nil {
 		fmt.Println("Invalid siFetchSize")
 		os.Exit(1)
