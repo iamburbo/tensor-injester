@@ -107,6 +107,9 @@ func (p *StandardPipeline) InitializeJob(ctx context.Context) *fetch.StandardFet
 	p.writer.WriteSignatures([]*rpc.TransactionSignature{signature})
 	log.Info().Msgf("starting from signature %s", signature.Signature.String())
 
+	// Add to deduper
+	p.deduper.Dedupe([]*rpc.TransactionSignature{signature})
+
 	return &fetch.StandardFetchJob{
 		TargetSignature:        signature.Signature,
 		TargetBlocktime:        *signature.BlockTime,

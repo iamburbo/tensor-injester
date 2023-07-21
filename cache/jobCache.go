@@ -10,6 +10,7 @@ import (
 )
 
 const STANDARD_JOB_SUFFIX = "_standard_cache.json"
+const HISTORY_JOB_SUFFIX = "_history_cache.json"
 
 type JobCache struct {
 	FilePrefix string
@@ -99,7 +100,6 @@ func (c *JobCache) CacheStandardJob(j *fetch.StandardFetchJob) error {
 	// Save to cache file
 	filename := c.FilePrefix + STANDARD_JOB_SUFFIX
 	err = os.WriteFile(filename, marshalled, 0644)
-
 	if err != nil {
 		return fmt.Errorf("failed to save job cache: %w", err)
 	}
@@ -119,6 +119,67 @@ func (c *JobCache) LoadStandardJob() (*fetch.StandardFetchJob, error) {
 	}
 
 	var cachedJob CachedStandardJob
+	err = json.Unmarshal(data, &cachedJob)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal job cache: %w", err)
+	}
+
+	converted, err := cachedJob.Convert()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert cached job: %w", err)
+	}
+
+	return converted, nil
+}
+
+type CachedHistoryJob struct {
+	PreviousFetchSignature string `json:"previousFetchSignature,omitempty"`
+	PreviousFetchBlocktime int64  `json:"previousFetchBlocktime,omitempty"`
+}
+
+func (j *CachedHistoryJob) Convert() (*fetch.HistoryFetchJob, error) {
+	previousFetchSignature, err := solana.SignatureFromBase58(j.PreviousFetchSignature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert PreviousFetchSignature: %w", err)
+	}
+
+	previousFetchBlocktime := solana.UnixTimeSeconds(j.PreviousFetchBlocktime)
+
+	return &fetch.HistoryFetchJob{
+		PreviousFetchSignature: &previousFetchSignature,
+		PreviousFetchBlocktime: previousFetchBlocktime,
+	}, nil
+}
+
+func (c *JobCache) CacheHistoryJob(job *fetch.HistoryFetchJob) error {
+	cachedJob := &CachedHistoryJob{
+		PreviousFetchSignature: job.PreviousFetchSignature.String(),
+		PreviousFetchBlocktime: job.PreviousFetchBlocktime.Time().Unix(),
+	}
+
+	marshalled, err := json.Marshal(cachedJob)
+	if err != nil {
+		return fmt.Errorf("failed to marshal job: %w", err)
+	}
+
+	filename := c.FilePrefix + HISTORY_JOB_SUFFIX
+	err = os.WriteFile(filename, marshalled, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to save job cache: %w", err)
+	}
+
+	return nil
+}
+
+func (c *JobCache) LoadHistoryJob() (*fetch.HistoryFetchJob, error) {
+	filename := c.FilePrefix + HISTORY_JOB_SUFFIX
+
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load job cache: %w", err)
+	}
+
+	var cachedJob CachedHistoryJob
 	err = json.Unmarshal(data, &cachedJob)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal job cache: %w", err)

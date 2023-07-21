@@ -95,12 +95,13 @@ func run(cmd *cobra.Command, args []string) {
 	case "a":
 		config.Filepath = "partA"
 		if mode == util.MODE_HISTORY {
-			// go partA.HistoryPipeline(pipelineCtx, &util.PipelineConfig{
-			// 	RpcClient:      rpcClient,
-			// 	Address:        marketplace,
-			// 	FetchLimit:     fetchSize,
-			// 	WriteSizeLimit: writeSize,
-			// })
+			pipeline, err := partA.NewHistoryPipeline(pipelineCtx, config, wg)
+			if err != nil {
+				log.Printf("Error creating pipeline: %v", err)
+				os.Exit(1)
+			}
+
+			go pipeline.Run(pipelineCtx)
 		} else {
 			pipeline, err := partA.NewStandardPipeline(pipelineCtx, config, wg)
 			if err != nil {
@@ -110,12 +111,19 @@ func run(cmd *cobra.Command, args []string) {
 
 			go pipeline.Run(pipelineCtx)
 		}
-		//
-		//  Part B data pipelines
-		//
+	//
+	//  Part B data pipelines
+	//
 	case "b":
 		config.Filepath = "partB"
 		if mode == util.MODE_HISTORY {
+			pipeline, err := partB.NewHistoryPipeline(pipelineCtx, config, wg)
+			if err != nil {
+				log.Printf("Error creating pipeline: %v", err)
+				os.Exit(1)
+			}
+
+			go pipeline.Run(pipelineCtx)
 		} else {
 			pipeline, err := partB.NewStandardPipeline(pipelineCtx, config, wg)
 			if err != nil {
@@ -131,7 +139,13 @@ func run(cmd *cobra.Command, args []string) {
 	case "c":
 		config.Filepath = "partC"
 		if mode == util.MODE_HISTORY {
+			pipeline, err := partC.NewHistoryPipeline(pipelineCtx, config, wg)
+			if err != nil {
+				log.Printf("Error creating pipeline: %v", err)
+				os.Exit(1)
+			}
 
+			go pipeline.Run(pipelineCtx)
 		} else {
 			pipeline, err := partC.NewStandardPipeline(pipelineCtx, config, wg)
 			if err != nil {
@@ -149,12 +163,15 @@ func run(cmd *cobra.Command, args []string) {
 	// Block until SIGINT
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT)
-	<-sigs
+
+	go func() {
+		<-sigs
+		cancel()
+	}()
 
 	// Wait for goroutines to finish and shutdown
-	fmt.Println("Goodbye!")
-	cancel()
 	wg.Wait()
+	fmt.Println("Job completed or SIGINT, Goodbye!")
 	os.Exit(0)
 }
 

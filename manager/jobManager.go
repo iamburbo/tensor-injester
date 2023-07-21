@@ -83,3 +83,40 @@ func (m *StandardJobManager) FinishJob() {
 
 	m.SetNextJob(newJob)
 }
+
+type HistoryJobManager struct {
+	job      *fetch.HistoryFetchJob
+	jobCache *cache.JobCache
+}
+
+func NewHistoryJobManager(initialJob *fetch.HistoryFetchJob, jobCache *cache.JobCache) (*HistoryJobManager, error) {
+	err := jobCache.CacheHistoryJob(initialJob)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HistoryJobManager{
+		job:      initialJob,
+		jobCache: jobCache,
+	}, nil
+}
+
+func (m *HistoryJobManager) GetJob() *fetch.HistoryFetchJob {
+	return m.job
+}
+
+func (m *HistoryJobManager) NextJob(signatures []*rpc.TransactionSignature) error {
+	earliest := util.GetEarliestSignatureFromBatch(signatures)
+
+	m.job = &fetch.HistoryFetchJob{
+		PreviousFetchSignature: &earliest.Signature,
+		PreviousFetchBlocktime: *earliest.BlockTime,
+	}
+
+	err := m.jobCache.CacheHistoryJob(m.job)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
